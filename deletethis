@@ -1,0 +1,110 @@
+import { useEffect, useMemo, useState } from 'react';
+import NavBar from '../components/NavBar';
+import PokemonTable from '../components/PokemonTable';
+
+export default function Pokedex() {
+    const PAGE_SIZE = 12;
+    const [pageNumber, setPageNumber] = useState(0);
+    const [pokemonList, setPokemonList] = useState([]);
+    const [pokemonCount, setPokemonCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const maxPageNumber = useMemo(
+        () => Math.max(Math.ceil(pokemonCount / PAGE_SIZE) - 1, 0),
+        [pokemonCount],
+    );
+
+    useEffect(() => {
+        const abortController = new AbortController();
+
+        async function loadPokemonPage() {
+            try {
+                setIsLoading(true);
+                setErrorMessage('');
+
+                // Assignment requirement: offset = limit * pageNumber
+                const offset = PAGE_SIZE * pageNumber;
+                const endpoint = `https://pokeapi.co/api/v2/pokemon/?limit=${PAGE_SIZE}&offset=${offset}`;
+
+                const response = await fetch(endpoint, {
+                    signal: abortController.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load data from PokeAPI.');
+                }
+
+                const data = await response.json();
+                const colors = ['#7fbf7f', '#84b981', '#6ba56a', '#f6b26b', '#85b6e8', '#c9a7e6'];
+
+                const mappedPokemon = data.results.map((pokemon, index) => {
+                    const id = Number(pokemon.url.split('/').filter(Boolean).pop()) || offset + index + 1;
+
+                    return {
+                        number: id,
+                        name: pokemon.name,
+                        imgUrl: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+                        mainColor: colors[id % colors.length],
+                    };
+                });
+
+                setPokemonCount(data.count || 0);
+                setPokemonList(mappedPokemon);
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    setErrorMessage('Failed to load Pokemon. Please try again.');
+                    setPokemonList([]);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        loadPokemonPage();
+
+        return () => {
+            abortController.abort();
+        };
+    }, [pageNumber]);
+
+    return (
+        <>
+            <NavBar />
+            <h1>Pokedex</h1>
+
+            <section className="pokemon-pagination" aria-label="Pokemon pagination">
+                <button
+                    type="button"
+                    className="pokemon-page-btn"
+                    onClick={() => setPageNumber((previousPage) => Math.max(previousPage - 1, 0))}
+                    disabled={isLoading || pageNumber === 0}
+                >
+                    Previous
+                </button>
+
+                <p className="pokemon-page-indicator">
+                    Page {pageNumber + 1} of {maxPageNumber + 1}
+                </p>
+
+                <button
+                    type="button"
+                    className="pokemon-page-btn"
+                    onClick={() =>
+                        setPageNumber((previousPage) =>
+                            Math.min(previousPage + 1, maxPageNumber),
+                        )
+                    }
+                    disabled={isLoading || pageNumber >= maxPageNumber}
+                >
+                    Next
+                </button>
+            </section>
+
+            {errorMessage ? <p className="pokemon-status">{errorMessage}</p> : null}
+            {isLoading ? <p className="pokemon-status">Loading Pokemon...</p> : null}
+
+            <PokemonTable pokemonList={pokemonList} />
+        </>
+    );
+}
