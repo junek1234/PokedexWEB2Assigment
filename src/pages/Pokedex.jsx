@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import NavBar from "../components/NavBar";
 import PokemonTable from "../components/PokemonTable";
+import TableBtn from "../components/TableBtn";
 
 function toTitleCase(value) {
   if (!value) {
@@ -36,11 +37,16 @@ const TYPE_COLORS = {
 
 export default function Pokedex() {
   const [pokemonList, setPokemonList] = useState([]);
-  const [offset] = useState(0);
+  const [pageNr, setPageNr] = useState(0);
+  const pageNumUp = () => setPageNr(pageNr + 1);
+  const pageNumDown = () =>
+    setPageNr(Math.max(pageNr - 1, 0));
+  const limit=12;
+  const offset=limit*pageNr;
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch(
-        `https://pokeapi.co/api/v2/pokemon?limit=12&offset=${offset}`,
+        `https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`,
       );
       const data = await response.json();
       const detailPromises = data.results.map((p) =>
@@ -100,6 +106,10 @@ export default function Pokedex() {
       <NavBar />
       <h1>Pokedex</h1>
       <PokemonTable pokemonList={pokemonList} />
+      <div className="table-btn-row" aria-label="Pagination controls">
+        <TableBtn direction="left" onClick={pageNumDown} />
+        <TableBtn direction="right" onClick={pageNumUp} />
+      </div>
     </>
   );
 }
