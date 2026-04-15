@@ -10,7 +10,7 @@ const router = createHashRouter([
     element: <Pokedex />,
   },
   {
-    path: "/pokemon/:name", // :name is a dynamic parameter
+    path: "/pokemon/:name",
     element: <PokemonDetails />,
   },
   {
